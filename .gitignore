@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+images/
+mokab_products.xlsx
+mokab_products.csv
+mokab_products.json
