@@ -34,10 +34,22 @@
 المخرجات: افتراضيًا يبني ملف "mokab_dashboard.html" - لوحة تحكم واحدة
 ذاتية الاحتواء (الصور والبيانات مضمّنة داخل الملف نفسه، تفتح بأي متصفح
 بدون إنترنت لعرض البيانات - تحتاج فقط إنترنت لعرض صور المنتجات نفسها
-لأنها تُحمّل من سيرفر مكعب) فيها: تحليل عام (إحصاءات، أعلى التصنيفات
+لأنها تُحمَّل من سيرفر مكعب) فيها: تحليل عام (إحصاءات، أعلى التصنيفات
 والعلامات التجارية)، ثم كل المنتجات كبطاقات (صورة أمام كل منتج) أو
 كجدول قابل للفرز والفلترة والبحث. يمكن أيضًا اختيار Excel/CSV/JSON
 عبر --format.
+
+ملاحظة حول التصنيف: قيمة "product:category" في صفحة كل منتج هي فعليًا
+قائمة مسطّحة بكل التصنيفات/الوسوم المستقلة التي يتبع لها المنتج بنفس
+الوقت (وليست مسار تصنيف هرمي واحد). لذلك نأخذ أول قيمة كـ"التصنيف
+الرئيسي" ونحتفظ بالباقي في حقل "category_tags" منفصل، بدل دمجها بعلامة
+">" بشكل مضلل. بالإضافة لذلك، هناك 3 تصنيفات إضافية مخصّصة تُحسب تلقائيًا
+بمطابقة كلمات مفتاحية (تُضاف فوق التصنيف الأصلي وليست بديلة عنه):
+"منتجات السيارة" (داش كام، حوامل جوال للسيارة، مبخرة، شواحن سيارة...)،
+"منتجات التنقل" (باور بانك، بطاريات متنقلة...)، و"الأعلى مبيعًا" (أنواع
+منتجات معروفة بأنها الأكثر مبيعًا عمومًا في اكسسوارات الجوال مثل الكفرات
+والشواحن). عدّل قوائم الكلمات المفتاحية (CAR_KEYWORDS/MOBILITY_KEYWORDS/
+BESTSELLER_KEYWORDS) بحرية لتحسين الدقة.
 
 الاستخدام:
     pip install requests beautifulsoup4 lxml pandas openpyxl --break-system-packages
@@ -102,10 +114,62 @@ HEADERS_HTML = {
     "Accept-Language": "ar,en;q=0.8",
 }
 
-REQUEST_TIMEOUT = 20
-RETRY_COUNT = 3
+REQUEST_TIMEOUT = 25
+RETRY_COUNT = 4
 RETRY_BACKOFF = 2.0
 POLITE_DELAY = 0.15  # ثانية بين الطلبات لكل عامل (Thread) لتخفيف الضغط على الخادم
+
+# ============================================================================
+# تصنيفات إضافية مخصّصة (تُضاف فوق التصنيف الأصلي، ولا تلغيه) - يتم تحديدها
+# تلقائيًا عبر مطابقة كلمات مفتاحية في اسم المنتج + تصنيفه + وصفه.
+# عدّل/أضف كلمات في هذه القوائم بحرية متى احتجت تحسين الدقة.
+# ============================================================================
+CAR_KEYWORDS = [
+    "سيارة", "السيارة", "سيارات", "للسياره", "للسيارة", "بالسيارة",
+    "داش كام", "داشكام", "dash cam", "dashcam", "dvr",
+    "مبخرة", "مبخره", "معطر السيارة", "معطر سيارة", "معطر للسيارة",
+    "مزيل الروائح", "مزيل روائح", "مزيل روائح السيارة",
+    "حامل سيارة", "حامل جوال للسيارة", "قاعدة سيارة", "ستاند سيارة",
+    "شاحن سيارة", "شاحن للسيارة", "كيبل سيارة", "منفذ السيارة", "الولاعة",
+    "obd", "دركسون", "عجلة القيادة", "فتحة تهوية", "فتحات التهويه",
+    "مرآة الرؤية الخلفية", "مرآة سيارة", "مرايا السيارة",
+    "رادار", "كاشف سرعة", "مسجل قيادة", "منظم سيارة", "شنطة سيارة",
+    "وسادة سيارة", "مساحة زجاج", "اكسسوارات السيارة", "اكسسوارات سيارة",
+    "مظلة الشمس", "مظلة شمسية", "مظلة للسيارة", "ستاند تابلت للسيارة",
+    "قفل عجلة القيادة", "منفذ ولاعة", "فرش السيارة", "غطاء مقعد",
+]
+
+MOBILITY_KEYWORDS = [
+    "باور بانك", "بور بانك", "power bank", "بطارية متنقلة", "شاحن متنقل",
+    "شاحن محمول", "شنطة سفر", "حقيبة سفر", "محفظة سفر", "منظم سفر",
+    "وسادة سفر", "شنطة ظهر", "backpack", "travel", "للسفر", "للتنقل",
+    "المسافرين", "المسافر",
+]
+
+BESTSELLER_KEYWORDS = [
+    # فئات معروفة بأنها الأكثر مبيعًا عمومًا في أسواق اكسسوارات الجوال
+    # (أمازون وغيره) - كفرات، حماية شاشة، شواحن، كيبلات، سماعات، باور بانك
+    "كفر", "كفرات", "case", "حماية شاشة", "سكرين قارد", "screen protector",
+    "شاحن", "charger", "كيبل", "cable", "سماعة", "سماعات", "earbuds",
+    "airpods", "باور بانك", "بور بانك", "power bank", "حامل جوال",
+    "phone stand", "لاصقة حماية",
+]
+
+
+def _match_keywords(text: str, keywords: list) -> bool:
+    text_low = (text or "").lower()
+    return any(kw.lower() in text_low for kw in keywords)
+
+
+def classify_extra_tags(name: str, category: str, category_tags: str, description: str):
+    """يحدد تصنيفات إضافية (سيارة / تنقل / الأعلى مبيعًا) بمطابقة كلمات مفتاحية
+    - هذه تصنيفات تكميلية تُضاف فوق التصنيف الأصلي وليست بديلة عنه."""
+    haystack = " ".join([name or "", category or "", category_tags or "", (description or "")[:300]])
+    return {
+        "is_car": _match_keywords(haystack, CAR_KEYWORDS),
+        "is_mobility": _match_keywords(haystack, MOBILITY_KEYWORDS),
+        "is_bestseller_type": _match_keywords(haystack, BESTSELLER_KEYWORDS),
+    }
 
 
 @dataclass
@@ -116,6 +180,7 @@ class Product:
     price_before_discount: Optional[float] = None
     discount_percent: Optional[float] = None
     category: str = ""
+    category_tags: str = ""
     brand: str = ""
     description: str = ""
     sku: str = ""
@@ -129,6 +194,9 @@ class Product:
     in_stock: Optional[bool] = None
     rating_value: Optional[float] = None
     review_count: Optional[int] = None
+    is_car: bool = False
+    is_mobility: bool = False
+    is_bestseller_type: bool = False
     errors: str = ""
 
 
@@ -186,7 +254,7 @@ def parse_html_extras(html: str):
     التصنيف، العلامة التجارية، وأي خيارات ألوان/مقاسات ظاهرة."""
     soup = BeautifulSoup(html, "lxml")
     extras = {
-        "category": "", "brand": "", "options": "", "availability_meta": "",
+        "category": "", "category_tags": "", "brand": "", "options": "", "availability_meta": "",
         "images": [], "in_stock": None, "rating_value": None, "review_count": None,
     }
 
@@ -242,11 +310,16 @@ def parse_html_extras(html: str):
         if og_img and og_img.get("content"):
             extras["images"].append(og_img["content"])
 
+    # ملاحظة مهمة: قيمة product:category هي قائمة مسطّحة بكل التصنيفات/الوسوم
+    # المستقلة التي يتبع لها المنتج بنفس الوقت (وليست مسار تصنيف هرمي واحد).
+    # لذلك نأخذ أول قيمة كـ"التصنيف الرئيسي" ونحتفظ بالباقي في حقل منفصل
+    # بدل دمجها بعلامة ">" بشكل مضلل وكأنها مسار واحد.
     cat_tag = soup.find("meta", attrs={"property": "product:category"})
     if cat_tag and cat_tag.get("content"):
-        extras["category"] = " > ".join(
-            [c.strip() for c in cat_tag["content"].split(",") if c.strip()]
-        )
+        cats_list = [c.strip() for c in cat_tag["content"].split(",") if c.strip()]
+        if cats_list:
+            extras["category"] = cats_list[0]
+            extras["category_tags"] = " | ".join(cats_list[1:])
 
     avail_tag = soup.find("meta", attrs={"property": "product:availability"})
     if avail_tag and avail_tag.get("content"):
@@ -342,6 +415,7 @@ def fetch_product(session, pid: str, url: str, images_dir: Optional[str] = None)
         html_resp = _get_with_retry(url, HEADERS_HTML, session)
         extras = parse_html_extras(html_resp.text)
         p.category = extras["category"]
+        p.category_tags = extras["category_tags"]
         p.brand = extras["brand"]
         p.options = extras["options"]
         p.image_urls = " | ".join(extras["images"])
@@ -357,6 +431,13 @@ def fetch_product(session, pid: str, url: str, images_dir: Optional[str] = None)
             download_product_images(session, pid, extras["images"], images_dir)
     except Exception as e:
         errors.append(f"html:{e}")
+
+    # تصنيفات إضافية مخصّصة (سيارة / تنقل / الأعلى مبيعًا) - تُحسب دائمًا من
+    # أي بيانات توفرت (الاسم من الـ API حتى لو فشل جلب صفحة HTML)
+    tags = classify_extra_tags(p.name, p.category, p.category_tags, p.description)
+    p.is_car = tags["is_car"]
+    p.is_mobility = tags["is_mobility"]
+    p.is_bestseller_type = tags["is_bestseller_type"]
 
     p.errors = "; ".join(errors)
     time.sleep(POLITE_DELAY)
@@ -519,7 +600,7 @@ DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
   .thumb img{ width:100%; height:100%; object-fit:contain; }
   .no-image{ color:#bbb; font-size:12px; }
   .card .body{ padding:10px 12px 14px; flex:1; display:flex; flex-direction:column; gap:5px; }
-  .card h3{ font-size:13px; margin:2px 0; line-height:1.45; min-height:38px; font-weight:500; }
+  .card h3{ font-size:13px; margin:2px 0; line-height:1.45; font-weight:500; }
   .price-now{ font-weight:700; color:var(--claude-orange-dark); font-size:15px; }
   .price-old{ color:#a39c86; text-decoration:line-through; font-size:11px; margin-inline-start:6px; }
   .badge-discount{ background:var(--red); color:#fff; border-radius:6px; padding:1px 6px; font-size:10px; margin-inline-start:6px; }
@@ -527,6 +608,17 @@ DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
   .badge{ align-self:flex-start; font-size:10.5px; border-radius:6px; padding:2px 8px; background:var(--bg); color:var(--ink-soft); }
   .badge.in-stock{ background:var(--green-bg); color:var(--green); }
   .badge.out-of-stock{ background:var(--red-bg); color:var(--red); }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .tag-chip{ font-size:10px; border-radius:20px; padding:2px 8px; font-weight:500; }
+  .tag-chip.car{ background:#EAF1FB; color:#2A5DA8; }
+  .tag-chip.mob{ background:#FBF0E4; color:#B3691E; }
+  .tag-chip.best{ background:#FDEEF6; color:#B3287D; }
+  .filter-toggle{ display:flex; gap:6px; }
+  .filter-toggle button{
+    font-family:inherit; border:1px solid var(--border); background:var(--bg); color:var(--ink-soft);
+    padding:8px 12px; font-size:12.5px; border-radius:20px; cursor:pointer;
+  }
+  .filter-toggle button.active{ background:var(--claude-orange); color:#fff; border-color:var(--claude-orange); }
 
   /* جدول */
   table{ width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -593,13 +685,21 @@ DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
         <button id="btnTable">جدول</button>
       </div>
     </div>
+    <div class="controls" style="margin-top:10px;">
+      <span style="font-size:12.5px; color:var(--ink-soft);">تصنيفات إضافية:</span>
+      <div class="filter-toggle">
+        <button id="tagCar" data-tag="car">🚗 منتجات السيارة</button>
+        <button id="tagMob" data-tag="mob">🧳 منتجات التنقل</button>
+        <button id="tagBest" data-tag="best">🔥 الأعلى مبيعًا</button>
+      </div>
+    </div>
     <div class="result-count" id="resultCount"></div>
     <div id="cardsView" class="grid"></div>
     <div id="tableView" style="display:none; overflow-x:auto;">
       <table>
         <thead><tr>
           <th>صورة</th><th>الاسم</th><th>التصنيف</th><th>العلامة</th><th>SKU</th>
-          <th>السعر الحالي</th><th>قبل الخصم</th><th>خصم%</th><th>التوفر</th><th>الضمان</th><th>رابط</th>
+          <th>السعر الحالي</th><th>قبل الخصم</th><th>خصم%</th><th>التوفر</th><th>الضمان</th><th>تصنيفات إضافية</th><th>رابط</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
@@ -618,7 +718,7 @@ DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
 <script>
 const PRODUCTS = __DATA_JSON__;
 const PAGE_SIZE = 60;
-let state = { view:'cards', page:1, filtered: PRODUCTS.slice() };
+let state = { view:'cards', page:1, filtered: PRODUCTS.slice(), tags: { car:false, mob:false, best:false } };
 
 function fmt(n){ if(n===null||n===undefined) return ''; return Number(n).toLocaleString('ar-SA'); }
 
@@ -645,6 +745,9 @@ function computeStats(list){
     <div class="stat-card"><div class="num">${discounted.length}</div><div class="label">منتج عليه خصم</div></div>
     <div class="stat-card"><div class="num">${avgDisc? avgDisc.toFixed(1)+'%':'-'}</div><div class="label">متوسط نسبة الخصم</div></div>
     ${avgRating!==null ? `<div class="stat-card"><div class="num">${avgRating.toFixed(2)}</div><div class="label">متوسط التقييم</div></div>` : ''}
+    <div class="stat-card"><div class="num">${list.filter(p=>p.car).length}</div><div class="label">🚗 منتجات السيارة</div></div>
+    <div class="stat-card"><div class="num">${list.filter(p=>p.mob).length}</div><div class="label">🧳 منتجات التنقل</div></div>
+    <div class="stat-card"><div class="num">${list.filter(p=>p.best).length}</div><div class="label">🔥 الأعلى مبيعًا</div></div>
   `;
 
   function topN(getKey, n){
@@ -685,6 +788,9 @@ function applyFilters(){
     if(cat && p.cat!==cat) return false;
     if(avail==='in' && p.stock!==true) return false;
     if(avail==='out' && p.stock!==false) return false;
+    if(state.tags.car && !p.car) return false;
+    if(state.tags.mob && !p.mob) return false;
+    if(state.tags.best && !p.best) return false;
     return true;
   });
 
@@ -710,6 +816,11 @@ function productCardHtml(p){
     }
   }
   const availClass = p.stock===true?'in-stock':(p.stock===false?'out-of-stock':'');
+  const chips = [
+    p.car ? '<span class="tag-chip car">🚗 سيارة</span>' : '',
+    p.mob ? '<span class="tag-chip mob">🧳 تنقل</span>' : '',
+    p.best ? '<span class="tag-chip best">🔥 الأعلى مبيعًا</span>' : '',
+  ].join('');
   return `<a class="card" href="${p.url||'#'}" target="_blank" rel="noopener">
     <div class="thumb">${img}</div>
     <div class="body">
@@ -719,12 +830,18 @@ function productCardHtml(p){
       <div class="meta">${p.cat||''}</div>
       <div class="meta">${p.brand||''}</div>
       <div class="meta">SKU: ${p.sku||'-'}</div>
+      ${chips ? `<div class="tag-row">${chips}</div>` : ''}
     </div>
   </a>`;
 }
 
 function productRowHtml(p){
   const availClass = p.stock===true?'in-stock':(p.stock===false?'out-of-stock':'');
+  const chips = [
+    p.car ? '<span class="tag-chip car">🚗 سيارة</span>' : '',
+    p.mob ? '<span class="tag-chip mob">🧳 تنقل</span>' : '',
+    p.best ? '<span class="tag-chip best">🔥 الأعلى مبيعًا</span>' : '',
+  ].join('');
   return `<tr>
     <td>${p.img?`<img class="t-thumb" src="${p.img}" loading="lazy">`:''}</td>
     <td class="t-name">${p.name||''}</td>
@@ -736,6 +853,7 @@ function productRowHtml(p){
     <td>${p.disc?p.disc+'%':''}</td>
     <td><span class="badge ${availClass}">${p.avail||'غير محدد'}</span></td>
     <td>${p.warranty||''}</td>
+    <td><div class="tag-row">${chips}</div></td>
     <td><a class="t-link" href="${p.url||'#'}" target="_blank" rel="noopener">فتح ↗</a></td>
   </tr>`;
 }
@@ -772,6 +890,14 @@ document.getElementById('btnTable').addEventListener('click', ()=>{ state.view='
 document.getElementById('prevPage').addEventListener('click', ()=>{ if(state.page>1){ state.page--; render(); } });
 document.getElementById('nextPage').addEventListener('click', ()=>{ state.page++; render(); });
 
+[['tagCar','car'],['tagMob','mob'],['tagBest','best']].forEach(([elId,key])=>{
+  document.getElementById(elId).addEventListener('click', ()=>{
+    state.tags[key] = !state.tags[key];
+    document.getElementById(elId).classList.toggle('active', state.tags[key]);
+    applyFilters();
+  });
+});
+
 populateCategoryFilter();
 applyFilters();
 </script>
@@ -793,6 +919,7 @@ def build_dashboard_html(products, out_path: str):
             "cat": p.category, "brand": p.brand, "sku": p.sku, "opts": p.options,
             "avail": p.availability, "stock": p.in_stock, "qty": p.quantity,
             "rating": p.rating_value, "reviews": p.review_count, "warranty": p.warranty,
+            "car": p.is_car, "mob": p.is_mobility, "best": p.is_bestseller_type,
             "img": (p.image_urls.split(" | ")[0] if p.image_urls else ""),
             "url": p.url,
         }
@@ -835,8 +962,9 @@ def save_output(products, fmt: str, out_path: str):
     df = pd.DataFrame(records)
     column_order = [
         "id", "name", "price_current", "price_before_discount", "discount_percent",
-        "category", "brand", "sku", "options", "availability", "in_stock",
+        "category", "category_tags", "brand", "sku", "options", "availability", "in_stock",
         "quantity", "rating_value", "review_count", "warranty",
+        "is_car", "is_mobility", "is_bestseller_type",
         "image_urls", "description", "url", "errors",
     ]
     df = df[[c for c in column_order if c in df.columns]]
@@ -846,7 +974,8 @@ def save_output(products, fmt: str, out_path: str):
         "price_current": "السعر الحالي",
         "price_before_discount": "السعر قبل الخصم",
         "discount_percent": "نسبة الخصم %",
-        "category": "التصنيف",
+        "category": "التصنيف الرئيسي",
+        "category_tags": "تصنيفات إضافية (من الموقع)",
         "brand": "العلامة التجارية",
         "sku": "SKU / رقم الموديل",
         "options": "الخيارات (لون/مقاس)",
@@ -856,6 +985,9 @@ def save_output(products, fmt: str, out_path: str):
         "rating_value": "متوسط التقييم",
         "review_count": "عدد المراجعات",
         "warranty": "الضمان",
+        "is_car": "منتجات السيارة",
+        "is_mobility": "منتجات التنقل",
+        "is_bestseller_type": "الأعلى مبيعًا (نوع منتج)",
         "image_urls": "روابط الصور",
         "description": "الوصف",
         "url": "رابط المنتج",
@@ -920,6 +1052,32 @@ def main():
     # إعادة الترتيب حسب الترتيب الأصلي في sitemap
     order = {pid: i for i, (pid, _) in enumerate(product_list)}
     products.sort(key=lambda p: order.get(p.id, 1_000_000))
+
+    # جولة إعادة محاولة تلقائية للمنتجات التي فشل جلب بياناتها بالكامل أو
+    # فشل استخراج تصنيفها فقط (غالبًا بسبب ضغط مؤقت على الخادم) - بعدد
+    # اتصالات أقل ومهلة أطول لزيادة فرصة النجاح، حتى تقنيتين إضافيتين.
+    url_by_id = {pid: url for pid, url in product_list}
+    for retry_round in range(2):
+        failed = [p for p in products if p.errors or (p.name and not p.category)]
+        if not failed:
+            break
+        print(f"إعادة محاولة الجولة {retry_round + 1} لـ {len(failed)} منتج واجه مشاكل...")
+        retry_workers = max(2, args.workers // 2)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=retry_workers) as executor:
+            futures = {
+                executor.submit(fetch_product, session, p.id, url_by_id.get(p.id, p.url), images_dir): p.id
+                for p in failed
+            }
+            fixed_by_id = {}
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                    fixed_by_id[result.id] = result
+                except Exception:
+                    pass
+        for i, p in enumerate(products):
+            if p.id in fixed_by_id:
+                products[i] = fixed_by_id[p.id]
 
     save_output(products, args.format, out_path)
     print(f"تم الحفظ في: {out_path}")
